@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012 Wolf480pl (wolf480@interia.pl)
+ * Copyright (c) 2012-2013 Wolf480pl (wolf480@interia.pl)
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -21,6 +21,7 @@
  */
 package com.github.wolf480pl.phpass;
 
+import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -90,11 +91,12 @@ public class PHPass {
             e.printStackTrace();
             return output;
         }
-        byte[] hash = md.digest((salt + password).getBytes());
+        byte[] pass = stringToUtf8(password);
+        byte[] hash = md.digest(stringToUtf8(salt + password));
         do {
-            byte[] t = new byte[hash.length + password.length()];
+            byte[] t = new byte[hash.length + pass.length];
             System.arraycopy(hash, 0, t, 0, hash.length);
-            System.arraycopy(password.getBytes(), 0, t, hash.length, password.length());
+            System.arraycopy(pass, 0, t, hash.length, pass.length);
             hash = md.digest(t);
         } while (--count > 0);
         output = setting.substring(0, 12);
@@ -102,18 +104,26 @@ public class PHPass {
         return output;
     }
 
-    private String gensaltPrivate(String input) {
+    private String gensaltPrivate(byte[] input) {
         String output = "$P$";
         output += itoa64.charAt(Math.min(this.iterationCountLog2 + 5, 30));
-        output += encode64(input.getBytes(), 6);
+        output += encode64(input, 6);
         return output;
+    }
+
+    private byte[] stringToUtf8(String string) {
+        try {
+            return string.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedOperationException("This system doesn't support UTF-8!", e);
+        }
     }
 
     public String HashPassword(String password) {
         byte random[] = new byte[6];
         this.randomGen.nextBytes(random);
         // Unportable hashes (Blowfish, EXT_DES) could be added here, but I won't do this.
-        String hash = cryptPrivate(password, gensaltPrivate(new String(random)));
+        String hash = cryptPrivate(password, gensaltPrivate(stringToUtf8(new String(random))));
         if (hash.length() == 34) {
             return hash;
         }
