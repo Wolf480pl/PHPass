@@ -25,6 +25,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 public class PHPass {
     private static String itoa64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -43,6 +44,13 @@ public class PHPass {
         int i, value;
         String output = "";
         i = 0;
+
+        if (src.length < count) {
+            byte[] t = new byte[count];
+            System.arraycopy(src, 0, t, 0, src.length);
+            Arrays.fill(t, src.length, count - 1, (byte) 0);
+        }
+
         do {
             value = src[i] + (src[i] < 0 ? 256 : 0);
             ++i;
