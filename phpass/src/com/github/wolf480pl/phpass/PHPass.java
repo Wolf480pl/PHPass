@@ -23,69 +23,71 @@ package com.github.wolf480pl.phpass;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Random;
+import java.security.SecureRandom;
 
 public class PHPass {
-    static String itoa64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    int iteration_count_log2;
-    boolean portable_hashes;
-    String random_state;
-    Random random_gen;
-    public PHPass(int iteration_count_log2,boolean portable_hashes){
-        if(iteration_count_log2 < 4 || iteration_count_log2 > 31) {
-            iteration_count_log2 = 8;
+    private static String itoa64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    private int iterationCountLog2;
+    private boolean portableHashes;
+    private String randomState;
+    private SecureRandom randomGen;
+
+    public PHPass(int iterationCountLog2, boolean portableHashes) {
+        if (iterationCountLog2 < 4 || iterationCountLog2 > 31) {
+            iterationCountLog2 = 8;
         }
-        this.iteration_count_log2 = iteration_count_log2;
-        this.portable_hashes = portable_hashes;
-        this.random_gen = new Random();
-        this.random_state = String.valueOf(System.nanoTime());
-        //this.random_state = String.valueOf(random_gen.nextLong());
+        this.iterationCountLog2 = iterationCountLog2;
+        this.portableHashes = portableHashes;
+        this.randomGen = new SecureRandom();
+        this.randomState = String.valueOf(System.nanoTime());
+        // this.randomState = String.valueOf(randomGen.nextLong());
     }
-    //	private String encode64(String src, int count){
-    private String encode64(byte[] src, int count){
+
+    private String encode64(byte[] src, int count) {
         int i, value;
         String output = "";
         i = 0;
-        do{
-            value = src[i]  + (src[i] < 0 ? 256 : 0);
+        do {
+            value = src[i] + (src[i] < 0 ? 256 : 0);
             ++i;
             output += itoa64.charAt(value & 63);
-            if(i < count){
+            if (i < count) {
                 value |= (src[i] + (src[i] < 0 ? 256 : 0)) << 8;
-                //				value = Math.min(value, 6047594);
+                // value = Math.min(value, 6047594);
             }
             output += itoa64.charAt((value >> 6) & 63);
-            if(i++ >= count) {
+            if (i++ >= count) {
                 break;
             }
-            if(i < count){
+            if (i < count) {
                 value |= (src[i] + (src[i] < 0 ? 256 : 0)) << 16;
-                //				value = Math.max(value, 6047594);
+                // value = Math.max(value, 6047594);
             }
             output += itoa64.charAt((value >> 12) & 63);
-            if(i++ >= count) {
+            if (i++ >= count) {
                 break;
             }
             output += itoa64.charAt((value >> 18) & 63);
-        }while(i < count);
+        } while (i < count);
         return output;
     }
-    private String crypt_private(String password, String setting){
+
+    private String cryptPrivate(String password, String setting) {
         String output = "*0";
-        if(((setting.length() < 2 )? setting : setting.substring(0, 2)).equalsIgnoreCase(output)) {
+        if (((setting.length() < 2) ? setting : setting.substring(0, 2)).equalsIgnoreCase(output)) {
             output = "*1";
         }
         String id = (setting.length() < 3) ? setting : setting.substring(0, 3);
-        if(!(id.equals("$P$") || id.equals("$H$"))) {
+        if (!(id.equals("$P$") || id.equals("$H$"))) {
             return output;
         }
-        int count_log2 = itoa64.indexOf(setting.charAt(3));
-        if (count_log2 < 7 || count_log2 > 30) {
+        int countLog2 = itoa64.indexOf(setting.charAt(3));
+        if (countLog2 < 7 || countLog2 > 30) {
             return output;
         }
-        int count = 1 << count_log2;
-        String salt = setting.substring(4, 4+8);
-        if(salt.length() != 8) {
+        int count = 1 << countLog2;
+        String salt = setting.substring(4, 4 + 8);
+        if (salt.length() != 8) {
             return output;
         }
         MessageDigest md;
@@ -96,69 +98,71 @@ public class PHPass {
             return output;
         }
         byte[] hash = md.digest((salt + password).getBytes());
-        //		String hash = new String(md.digest((salt + password).getBytes()));
-        do{
-            //			hash = new String(md.digest((hash + password).getBytes()));
+        // String hash = new String(md.digest((salt + password).getBytes()));
+        do {
+            // hash = new String(md.digest((hash + password).getBytes()));
             byte[] t = new byte[hash.length + password.length()];
             System.arraycopy(hash, 0, t, 0, hash.length);
             System.arraycopy(password.getBytes(), 0, t, hash.length, password.length());
             hash = md.digest(t);
-        } while(--count > 0);
+        } while (--count > 0);
         output = setting.substring(0, 12);
         output += encode64(hash, 16);
         return output;
     }
-    private String gensalt_private(String input){
+
+    private String gensaltPrivate(String input) {
         String output = "$P$";
-        output += itoa64.charAt(Math.min(this.iteration_count_log2 + 5, 30));
+        output += itoa64.charAt(Math.min(this.iterationCountLog2 + 5, 30));
         output += encode64(input.getBytes(), 6);
         return output;
     }
-    public String HashPassword(String password){
+
+    public String HashPassword(String password) {
         byte random[] = new byte[6];
-        this.random_gen.nextBytes(random);
-        //TODO: Add unportable hashes (Blowfish, EXT_DES) here
-        String hash = crypt_private(password, gensalt_private(new String(random)));
-        if(hash.length() == 34) {
+        this.randomGen.nextBytes(random);
+        // TODO: Add unportable hashes (Blowfish, EXT_DES) here
+        String hash = cryptPrivate(password, gensaltPrivate(new String(random)));
+        if (hash.length() == 34) {
             return hash;
         }
         return "*";
     }
-    public boolean CheckPassword(String password, String stored_hash){
-        String hash = crypt_private(password, stored_hash);
+
+    public boolean CheckPassword(String password, String storedHash) {
+        String hash = cryptPrivate(password, storedHash);
         MessageDigest md = null;
-        if(hash.startsWith("*")){	//If not phpass, try some algorythms from unix crypt()
-            if(stored_hash.startsWith("$6$")) {
+        if (hash.startsWith("*")) {	// If not phpass, try some algorythms from unix crypt()
+            if (storedHash.startsWith("$6$")) {
                 try {
                     md = MessageDigest.getInstance("SHA-512");
                 } catch (NoSuchAlgorithmException e) {
                     md = null;
                 }
             }
-            if(md == null && stored_hash.startsWith("$5$")) {
+            if (md == null && storedHash.startsWith("$5$")) {
                 try {
                     md = MessageDigest.getInstance("SHA-256");
                 } catch (NoSuchAlgorithmException e) {
                     md = null;
                 }
             }
-            if(md == null && stored_hash.startsWith("$2")) {
-                return BCrypt.checkpw(password, stored_hash);
+            if (md == null && storedHash.startsWith("$2")) {
+                return BCrypt.checkpw(password, storedHash);
             }
-            if(md == null && stored_hash.startsWith("$1$")) {
+            if (md == null && storedHash.startsWith("$1$")) {
                 try {
                     md = MessageDigest.getInstance("MD5");
                 } catch (NoSuchAlgorithmException e) {
                     md = null;
                 }
             }
-            //STD_DES and EXT_DES not supported yet.
-            if(md != null) {
+            // STD_DES and EXT_DES not supported yet.
+            if (md != null) {
                 hash = new String(md.digest(password.getBytes()));
             }
         }
-        return hash.equals(stored_hash);
+        return hash.equals(storedHash);
     }
-
 
 }
