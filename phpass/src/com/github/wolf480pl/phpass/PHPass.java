@@ -28,19 +28,14 @@ import java.security.SecureRandom;
 public class PHPass {
     private static String itoa64 = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private int iterationCountLog2;
-    private boolean portableHashes;
-    private String randomState;
     private SecureRandom randomGen;
 
-    public PHPass(int iterationCountLog2, boolean portableHashes) {
+    public PHPass(int iterationCountLog2) {
         if (iterationCountLog2 < 4 || iterationCountLog2 > 31) {
             iterationCountLog2 = 8;
         }
         this.iterationCountLog2 = iterationCountLog2;
-        this.portableHashes = portableHashes;
         this.randomGen = new SecureRandom();
-        this.randomState = String.valueOf(System.nanoTime());
-        // this.randomState = String.valueOf(randomGen.nextLong());
     }
 
     private String encode64(byte[] src, int count) {
@@ -53,7 +48,6 @@ public class PHPass {
             output += itoa64.charAt(value & 63);
             if (i < count) {
                 value |= (src[i] + (src[i] < 0 ? 256 : 0)) << 8;
-                // value = Math.min(value, 6047594);
             }
             output += itoa64.charAt((value >> 6) & 63);
             if (i++ >= count) {
@@ -61,7 +55,6 @@ public class PHPass {
             }
             if (i < count) {
                 value |= (src[i] + (src[i] < 0 ? 256 : 0)) << 16;
-                // value = Math.max(value, 6047594);
             }
             output += itoa64.charAt((value >> 12) & 63);
             if (i++ >= count) {
@@ -98,9 +91,7 @@ public class PHPass {
             return output;
         }
         byte[] hash = md.digest((salt + password).getBytes());
-        // String hash = new String(md.digest((salt + password).getBytes()));
         do {
-            // hash = new String(md.digest((hash + password).getBytes()));
             byte[] t = new byte[hash.length + password.length()];
             System.arraycopy(hash, 0, t, 0, hash.length);
             System.arraycopy(password.getBytes(), 0, t, hash.length, password.length());
@@ -121,7 +112,7 @@ public class PHPass {
     public String HashPassword(String password) {
         byte random[] = new byte[6];
         this.randomGen.nextBytes(random);
-        // TODO: Add unportable hashes (Blowfish, EXT_DES) here
+        // Unportable hashes (Blowfish, EXT_DES) could be added here, but I won't do this.
         String hash = cryptPrivate(password, gensaltPrivate(new String(random)));
         if (hash.length() == 34) {
             return hash;
