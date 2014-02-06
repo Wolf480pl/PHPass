@@ -49,6 +49,7 @@ public class PHPass {
             byte[] t = new byte[count];
             System.arraycopy(src, 0, t, 0, src.length);
             Arrays.fill(t, src.length, count - 1, (byte) 0);
+            src = t;
         }
 
         do {
