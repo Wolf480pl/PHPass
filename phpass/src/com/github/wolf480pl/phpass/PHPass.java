@@ -53,7 +53,7 @@ public class PHPass {
         }
 
         do {
-            value = src[i] + (src[i] < 0 ? 256 : 0);
+            value = src[i] & 0xff;
             ++i;
             output += itoa64.charAt(value & 63);
             if (i < count) {
